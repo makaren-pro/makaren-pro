@@ -15,9 +15,11 @@ from profile.generate import (
     generate,
     identity_footer_block,
     load_config,
+    profile_asset_base,
     sync_readme,
 )
 from profile.github_data import ContributionDay
+from profile.qa_visual import _readme_html
 from profile.render import THEMES, render_system_node, system_asset_stem
 
 
@@ -338,11 +340,38 @@ class RenderTests(unittest.TestCase):
         self.assertNotIn("↗", footer)
         self.assertNotIn('target="_blank"', footer)
 
-    def test_readme_sync_is_idempotent_and_updates_only_marker_blocks(self) -> None:
+    def test_readme_sync_is_idempotent(self) -> None:
         before = README.read_text(encoding="utf-8")
         self.assertTrue(sync_readme())
         self.assertEqual(before, README.read_text(encoding="utf-8"))
         self.assertTrue(sync_readme(check=True))
+
+    def test_readme_sync_updates_every_profile_asset_url(self) -> None:
+        config = load_config(DEFAULT_CONFIG)
+        old_base = profile_asset_base(config)
+        identity = dict(config["identity"])
+        identity["github_username"] = "renamed-user"
+        config["identity"] = identity
+        new_base = profile_asset_base(config)
+
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            readme_path = Path(directory) / "README.md"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            readme_path.write_text(README.read_text(encoding="utf-8"), encoding="utf-8")
+
+            self.assertFalse(sync_readme(config_path, readme_path, check=True))
+            self.assertTrue(sync_readme(config_path, readme_path))
+            updated = readme_path.read_text(encoding="utf-8")
+            self.assertTrue(sync_readme(config_path, readme_path, check=True))
+
+        self.assertNotIn(old_base, updated)
+        self.assertEqual(37, updated.count(new_base))
+
+    def test_visual_qa_localizes_every_profile_asset(self) -> None:
+        html = _readme_html("http://127.0.0.1:9999", "dark")
+        self.assertNotIn("https://raw.githubusercontent.com/", html)
+        self.assertEqual(37, html.count("http://127.0.0.1:9999/dist/"))
 
 
 if __name__ == "__main__":

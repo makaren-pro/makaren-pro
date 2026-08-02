@@ -5,14 +5,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from profile.generate import DEFAULT_CONFIG, load_config
+from profile.generate import DEFAULT_CONFIG, load_config, profile_asset_base
 from profile.github_data import ContributionDataError
 
 
 class ConfigTests(unittest.TestCase):
     def test_default_config_contract(self) -> None:
         config = load_config(DEFAULT_CONFIG)
-        self.assertEqual("MakarenD", config["identity"]["github_username"])
+        self.assertEqual("makaren-pro", config["identity"]["github_username"])
+        self.assertEqual(
+            "https://raw.githubusercontent.com/makaren-pro/makaren-pro/output/",
+            profile_asset_base(config),
+        )
         self.assertEqual(
             ["backend", "frontend", "data", "platform"], list(config["capabilities"])
         )
