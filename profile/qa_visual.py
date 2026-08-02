@@ -13,6 +13,7 @@ from pathlib import Path
 
 from playwright.sync_api import Browser, Page, sync_playwright
 
+from .generate import DEFAULT_CONFIG, load_config, profile_asset_base
 from .render import THEMES, render_system_node, render_systems_header
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,8 +39,10 @@ def _readme_html(base_url: str, theme: str) -> str:
         raise RuntimeError(
             "README must contain signal pictures and a connected-systems block"
         )
-    raw_base = "https://raw.githubusercontent.com/MakarenD/MakarenD/output/"
+    raw_base = profile_asset_base(load_config(DEFAULT_CONFIG))
     local_readme = re.sub(r"\?v=\d+", "", readme.replace(raw_base, f"{base_url}/dist/"))
+    if "https://raw.githubusercontent.com/" in local_readme:
+        raise RuntimeError("README visual QA must use only local profile assets")
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>
       html,body{{margin:0;background:{background};color:{"#f0f6fc" if theme == "dark" else "#1f2328"}}}
       main{{width:100%;max-width:1000px;margin:0 auto;padding:12px;box-sizing:border-box}}

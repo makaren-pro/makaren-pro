@@ -31,6 +31,10 @@ README = ROOT / "README.md"
 SYSTEMS_MARKERS = ("<!-- CONNECTED_SYSTEMS:START -->", "<!-- CONNECTED_SYSTEMS:END -->")
 FOOTER_MARKERS = ("<!-- IDENTITY_FOOTER:START -->", "<!-- IDENTITY_FOOTER:END -->")
 SAFE_SYSTEM_ID = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*$")
+RAW_SIGNAL_ASSET_BASE = re.compile(
+    r"https://raw\.githubusercontent\.com/[^/\s\"']+/[^/\s\"']+/output/"
+    r"(?=signal-[^\s\"']+\.svg)"
+)
 
 
 def load_config(path: Path) -> dict[str, object]:
@@ -123,8 +127,12 @@ def _validate_https_url(value: str, label: str) -> None:
         raise ContributionDataError(f"{label} URLs must use HTTPS")
 
 
-def _picture(asset_stem: str, alt: str, version: int = 2) -> str:
-    base = "https://raw.githubusercontent.com/MakarenD/MakarenD/output/"
+def profile_asset_base(config: Mapping[str, object]) -> str:
+    username = str(config["identity"]["github_username"])
+    return f"https://raw.githubusercontent.com/{username}/{username}/output/"
+
+
+def _picture(asset_stem: str, alt: str, base: str, version: int = 2) -> str:
     return "\n".join(
         [
             "<picture>",
@@ -140,11 +148,12 @@ def _picture(asset_stem: str, alt: str, version: int = 2) -> str:
 
 def connected_systems_block(config: Mapping[str, object]) -> str:
     systems = list(config["connected_systems"])
-    blocks = [_picture("signal-systems-header", "Makaren connected systems")]
+    base = profile_asset_base(config)
+    blocks = [_picture("signal-systems-header", "Makaren connected systems", base)]
     for system in systems:
         name = str(system["name"])
         url = escape(str(system["url"]), quote=True)
-        picture = _picture(system_asset_stem(str(system["id"])), name)
+        picture = _picture(system_asset_stem(str(system["id"])), name, base)
         blocks.append(
             f'<a href="{url}" aria-label="Open {escape(name, quote=True)}" title="Open {escape(name, quote=True)}">\n{picture}\n</a>'
         )
@@ -177,8 +186,9 @@ def sync_readme(
 ) -> bool:
     config = load_config(config_path)
     current = readme_path.read_text(encoding="utf-8")
+    updated = RAW_SIGNAL_ASSET_BASE.sub(profile_asset_base(config), current)
     updated = _replace_marker_block(
-        current, SYSTEMS_MARKERS, connected_systems_block(config)
+        updated, SYSTEMS_MARKERS, connected_systems_block(config)
     )
     updated = _replace_marker_block(
         updated, FOOTER_MARKERS, identity_footer_block(config)

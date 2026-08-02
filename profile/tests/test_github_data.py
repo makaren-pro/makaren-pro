@@ -135,7 +135,7 @@ class ContributionDataTests(unittest.TestCase):
             side_effect=[ContributionAccessError("denied"), raw],
         ) as fetch:
             days = fetch_contributions(
-                "MakarenD",
+                "example-user",
                 self.end,
                 {"GITHUB_TOKEN": "built-in", "METRICS_TOKEN": "fallback"},
             )
@@ -152,7 +152,7 @@ class ContributionDataTests(unittest.TestCase):
         ) as fetch:
             with self.assertRaisesRegex(ContributionDataError, "invalid schema"):
                 fetch_contributions(
-                    "MakarenD",
+                    "example-user",
                     self.end,
                     {"GITHUB_TOKEN": "built-in", "METRICS_TOKEN": "fallback"},
                 )
@@ -161,7 +161,7 @@ class ContributionDataTests(unittest.TestCase):
     def test_missing_tokens_fail_without_network_request(self) -> None:
         with mock.patch.object(github_data, "_fetch_with_token") as fetch:
             with self.assertRaises(ContributionDataError):
-                fetch_contributions("MakarenD", self.end, {})
+                fetch_contributions("example-user", self.end, {})
         fetch.assert_not_called()
 
 
